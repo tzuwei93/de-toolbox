@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=42.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spark-thrift-local-server"
+version = "0.1.0"
+description = "Local Spark Thrift Server for development"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.dependencies]
+PyHive = "0.7.0"
+thrift = "0.16.0"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]

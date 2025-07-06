@@ -1,0 +1,51 @@
+services:
+  spark-thrift-server:
+    image: spark-thrift-server:${APP_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spark-thrift-server
+    hostname: spark-thrift-server
+    entrypoint: /usr/local/bin/start-spark-thrift.sh
+    environment:
+      - SPARK_WAREHOUSE_DIR=/opt/spark/work-dir/data/warehouse
+      - SPARK_THRIFT_PORT=10000
+      - SPARK_DRIVER_MEMORY=1g
+      - SPARK_EXECUTOR_MEMORY=2g
+      - SPARK_DRIVER_CORES=1
+      - SPARK_EXECUTOR_CORES=1
+      - SPARK_NUM_EXECUTORS=1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-NO_ACCESS_KEY_PROVIDED}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-NO_SECRET_KEY_PROVIDED}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-NO_SESSION_TOKEN_PROVIDED}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-northeast-1}
+    volumes:
+      - ./spark-data-volume:/opt/spark/work-dir/data
+      - ./logs:/opt/spark/logs
+      - ./start-spark-thrift.sh:/usr/local/bin/start-spark-thrift.sh
+      - ./pyproject.toml:/usr/local/bin/pyproject.toml
+      - ./test_spark_connection.py:/usr/local/bin/test_spark_connection.py
+    ports:
+      - "10000:10000"  # Thrift Server
+      - "4040:4040"    # Spark UI
+      - "7077:7077"    # Spark Master
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "10000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    networks:
+      - dagster_network
+    restart: unless-stopped
+
+networks:
+  dagster_network:
+    external: true
+    name: dagster_network
+

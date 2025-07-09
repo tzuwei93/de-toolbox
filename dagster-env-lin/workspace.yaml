@@ -1,0 +1,12 @@
+load_from:
+  # define your dagster code server location like below
+  # user_code is the one from Dockerfile_user_code
+  - grpc_server:
+      host: user_code
+      port: 4001
+      location_name: "user_code"
+
+  - grpc_server:
+      host: nbe_user_code 
+      port: 4002
+      location_name: "nbe_user_code"

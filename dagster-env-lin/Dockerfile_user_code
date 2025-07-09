@@ -1,0 +1,44 @@
+FROM python:3.10-slim
+
+# Set environment variables for locale
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    POETRY_HOME="/opt/poetry" \
+    POETRY_VERSION=1.8.2 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_CACHE_DIR="/var/cache/pypoetry"
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    locales \
+    curl \
+    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
+    && locale-gen \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+RUN pip install --no-cache-dir poetry==$POETRY_VERSION
+
+WORKDIR /opt/dagster/app
+
+# Copy project files
+COPY pyproject.toml poetry.lock* ./
+
+# Install Python packages using Poetry
+RUN poetry install --no-interaction --no-root --no-dev && \
+    # Create __init__.py to make /app a Python package
+    touch __init__.py
+
+# Create necessary directories
+RUN mkdir -p /tmp/dagster
+
+# Expose the code server port
+EXPOSE 4000
+
+# Default command to start the code server
+# This will be overridden in docker-compose.yml
+# Reloading definitions from a code server launched via `dagster api grpc` 
+# without restarting the process is not currently supported. To enable this functionality, launch the code server with the `dagster code-server start` command instead.
+# CMD ["dagster", "api", "grpc", "-h", "0.0.0.0", "-p", "4000", "-f", "/opt/dagster/app/definitions.py"]
+CMD ["dagster", "code-server", "start", "-p", "4000", "-d", "/opt/dagster/app", "-m", "projects"]

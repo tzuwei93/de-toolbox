@@ -1,0 +1,109 @@
+# Note: version is obsolete in newer Docker Compose versions
+x-shared-env: &shared-env
+  # Database connection (unified)
+  POSTGRES_USER: postgres_user
+  POSTGRES_PASSWORD: postgres_password
+  POSTGRES_DB: postgres_db
+  POSTGRES_DB_HOST: postgres
+  POSTGRES_DB_PORT: 5432
+  POSTGRES_DB_DBT_SCHEMA: dbt_tutorial
+
+services:
+  # PostgreSQL database for Dagster (optional since we're using SQLite)
+  postgres:
+    image: postgres:11
+    container_name: dagster_postgres
+    environment:
+      <<: *shared-env
+    networks:
+      - dagster_network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres_user -d postgres_db']
+      interval: 10s
+      timeout: 8s
+      retries: 5
+    expose:
+      - '5432'
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+
+  # User code container
+  user_code:
+    build:
+      context: .
+      dockerfile: Dockerfile_user_code
+    container_name: dagster_user_code
+    image: dagster_user_code_image
+    restart: always
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      # Database connection (unified)
+      <<: *shared-env
+    volumes:
+      - ./projects:/opt/dagster/app/projects
+      - ./dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
+    working_dir: /opt/dagster/app
+    command: ["dagster", "code-server", "start", "-h", "0.0.0.0", "-p", "4001", "-d", "/opt/dagster/app", "-m", "projects"]
+    expose:
+      - '4001'
+    ports:
+      - '4001:4001'
+    networks:
+      dagster_network:
+        aliases:
+          - user_code
+
+  # Webserver
+  webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile_dagster
+    container_name: dagster_webserver
+    command: dagster-webserver -h 0.0.0.0 -p 3000 -w /opt/dagster/dagster_home/workspace.yaml
+    expose:
+      - '3000'
+    ports:
+      - '3000:3000'
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      <<: *shared-env
+    working_dir: /opt/dagster/app
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # - ./projects:/opt/dagster/app/projects
+      - ./dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
+      - ./workspace.yaml:/opt/dagster/dagster_home/workspace.yaml
+      - /tmp/dagster:/tmp/dagster
+    networks:
+      - dagster_network
+    depends_on:
+      - user_code
+
+  # Daemon
+  daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile_dagster
+    container_name: dagster_daemon
+    command: dagster-daemon run
+    restart: on-failure
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      # Database connection (unified)
+      <<: *shared-env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
+      - ./workspace.yaml:/opt/dagster/dagster_home/workspace.yaml
+      - /tmp/dagster:/tmp/dagster
+    networks:
+      - dagster_network
+    depends_on:
+      - user_code
+
+networks:
+  dagster_network:
+    external: true
+    name: dagster_network

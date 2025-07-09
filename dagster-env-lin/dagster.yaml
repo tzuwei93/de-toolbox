@@ -1,0 +1,47 @@
+# Minimal configuration for local development
+compute_logs:
+  module: dagster.core.storage.local_compute_log_manager
+  class: LocalComputeLogManager
+  config:
+    base_dir: /tmp/dagster/compute_logs
+
+run_launcher:
+  module: dagster._core.launcher.default_run_launcher
+  class: DefaultRunLauncher
+
+run_queue:
+  max_concurrent_runs: 10
+  dequeue_interval_seconds: 5
+
+run_storage:
+  module: dagster_postgres.run_storage
+  class: PostgresRunStorage
+  config:
+    postgres_db:
+      username: {env: POSTGRES_USER}
+      password: {env: POSTGRES_PASSWORD}
+      hostname: {env: POSTGRES_DB_HOST}
+      db_name: {env: POSTGRES_DB}
+      port: {env: POSTGRES_DB_PORT}
+
+event_log_storage:
+  module: dagster_postgres.event_log
+  class: PostgresEventLogStorage
+  config:
+    postgres_db:
+      username: {env: POSTGRES_USER}
+      password: {env: POSTGRES_PASSWORD}
+      hostname: {env: POSTGRES_DB_HOST}
+      db_name: {env: POSTGRES_DB}
+      port: {env: POSTGRES_DB_PORT}
+
+schedule_storage:
+  module: dagster_postgres.schedule_storage
+  class: PostgresScheduleStorage
+  config:
+    postgres_db:
+      username: {env: POSTGRES_USER}
+      password: {env: POSTGRES_PASSWORD}
+      hostname: {env: POSTGRES_DB_HOST}
+      db_name: {env: POSTGRES_DB}
+      port: {env: POSTGRES_DB_PORT}
